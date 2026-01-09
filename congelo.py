@@ -105,8 +105,9 @@ with tab1:
             
             if st.form_submit_button("Ajouter"):
                 ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                new_row = pd.DataFrame([{"Nom": n, "Catégorie": cat_a, "Contenant": cont_a, "Lieu": loc_a, "Nombre": int(q_a), "Date": ts}])
-                df = pd.concat([df, new_row], ignore_index=True)
+               new_row = pd.DataFrame([{"Nom": n, "Catégorie": cat_a, "Contenant": cont_a, "Lieu": loc_a, "Nombre": int(q_a), "Date": ts}])
+# On place 'new_row' AVANT 'df' pour qu'il soit en haut
+df = pd.concat([new_row, df], ignore_index=True)
                 st.session_state.last_added_id = f"{n}_{ts}"
                 update_stock(df, f"Ajout {n}")
 

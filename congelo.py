@@ -28,7 +28,6 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # --- CONFIG GITHUB ---
-# Assurez-vous que ces secrets sont bien configurés dans Streamlit Cloud
 GITHUB_TOKEN = st.secrets["GITHUB_TOKEN"]
 REPO_NAME = st.secrets["REPO_NAME"]
 FILE_CSV = "stock_congelateur.csv"
@@ -80,13 +79,13 @@ def reset_filters():
     st.session_state.search_val = ""
     st.session_state.cat_val = "Toutes"
     st.session_state.loc_val = "Tous"
-    st.session_state.sort_mode = "newest" # Par défaut sur le plus récent
+    st.session_state.sort_mode = "alpha" 
     st.session_state.last_added_id = None
 
 # --- INTERFACE ---
 st.title("❄️ Stock congélateurs")
 
-if 'sort_mode' not in st.session_state: st.session_state.sort_mode = "newest"
+if 'sort_mode' not in st.session_state: st.session_state.sort_mode = "alpha"
 if 'last_added_id' not in st.session_state: st.session_state.last_added_id = None
 
 tab1, tab_recap, tab2 = st.tabs(["📦 Stock", "📋 Récapitulatif", "⚙️ Configuration"])
@@ -107,10 +106,7 @@ with tab1:
             if st.form_submit_button("Ajouter"):
                 ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 new_row = pd.DataFrame([{"Nom": n, "Catégorie": cat_a, "Contenant": cont_a, "Lieu": loc_a, "Nombre": int(q_a), "Date": ts}])
-                
-                # MODIFICATION ICI : On met la nouvelle ligne AVANT le reste du tableau
                 df = pd.concat([new_row, df], ignore_index=True)
-                
                 st.session_state.last_added_id = f"{n}_{ts}"
                 update_stock(df, f"Ajout {n}")
 
@@ -134,14 +130,18 @@ with tab1:
         if f_cat != "Toutes": working_df = working_df[working_df['Catégorie'] == f_cat]
         if f_loc != "Tous": working_df = working_df[working_df['Lieu'] == f_loc]
         
-        # Gestion des tris
+        # --- LOGIQUE DE TRI PERSONNALISÉE ---
+        # On crée une colonne temporaire pour identifier le dernier ajouté
+        working_df['is_last'] = (working_df['Nom'] + "_" + working_df['Date']) == st.session_state.last_added_id
+        
         if st.session_state.sort_mode == "alpha":
-            working_df = working_df.sort_values(by='Nom')
+            # On trie d'abord par 'is_last' (True arrive après False, donc on met ascending=False pour avoir True en haut)
+            # Puis par Nom
+            working_df = working_df.sort_values(by=['is_last', 'Nom'], ascending=[False, True])
         elif st.session_state.sort_mode == "oldest":
-            working_df = working_df.sort_values(by=['Date_dt', 'Nom'])
+            working_df = working_df.sort_values(by=['is_last', 'Date_dt', 'Nom'], ascending=[False, True, True])
         elif st.session_state.sort_mode == "newest":
-            # On trie par date la plus récente, mais le concat initial aide déjà
-            working_df = working_df.sort_values(by=['Date_dt', 'Nom'], ascending=[False, True])
+            working_df = working_df.sort_values(by=['is_last', 'Date_dt', 'Nom'], ascending=[False, False, True])
         
         working_df = working_df.reset_index()
 
@@ -150,7 +150,7 @@ with tab1:
     else:
         for _, row in working_df.iterrows():
             orig_idx = row['index']
-            is_new = (f"{row['Nom']}_{row['Date']}") == st.session_state.last_added_id
+            is_new = row['is_last'] # Utilisation de la colonne de tri
             status_color = "#ddd"
             if pd.notna(row['Date_dt']):
                 diff = (datetime.now() - row['Date_dt']).days

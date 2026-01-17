@@ -1,2 +1,3 @@
-Nom,Catégorie,Nombre,Lieu,Date,Contenant
-Pain,Autre,4,Cuisine,2026-01-17 18:28:28,Sachet
+Nom,Catégorie,Contenant,Lieu,Nombre,Date
+Lasagnes,Plat cuisiné,Sachet,Cuisine,2,2026-01-17 18:28:59
+Pain,Autre,Sachet,Cuisine,4,2026-01-17 18:28:28
